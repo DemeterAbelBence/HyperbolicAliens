@@ -64,33 +64,65 @@ const char * const fragmentSource = R"(
 GPUProgram gpuProgram; // vertex and fragment shaders
 unsigned int vao;	   // virtual world on the GPU
 
-class Point {
-	unsigned int pointVBO;
-	vec2 position;
+//hyperbolic geometry global functions
+float lorentzProduct(vec3 a, vec3 b) { return a.x * b.x + a.y * b.y - a.z * b.z; }
+vec3 normalizeVector(vec3& v) {
+	float length = sqrt(lorentzProduct(v, v));
+	return v / length;
+}
+void adjustPointAfterMoving(vec3& p) {
+	float lambda = sqrtf(-1 / lorentzProduct(p, p));
+	p = p * lambda;
+}
+void adjustVectorAfterMoving(vec3& v, const vec3& p) {
+	float lambda = lorentzProduct(v, p) / (p.z * p.z - p.x * p.x - p.y * p.y);
+	v = v + p * lambda;
+	v = normalizeVector(v);
+}
+vec3 createNormalVector(const vec3& p, vec3& v) {
+	v = normalizeVector(v);
+	return cross(vec3(v.x, v.y, -v.z), vec3(p.x, p.y, -p.z));
+}
+vec3 createPointByMoving(const vec3& p, vec3& v, float t) {
+	v = normalizeVector(v);
+	vec3 r = p * coshf(t) + v * sinhf(t);
+	adjustPointAfterMoving(r);
+	return r;
+}
+void movePoint(vec3& p, vec3& v, float t) {
+	v = normalizeVector(v);
+	v = p * sinhf(t) + v * coshf(t);
+	p = p * coshf(t) + v * sinhf(t);
 
-public:
-	Point() {}
-	Point(float x, float y) {
-		position.x = x;
-		position.y = y;
-		glGenBuffers(1, &pointVBO);
+	adjustVectorAfterMoving(v, p);
+	adjustPointAfterMoving(p);
+}
+vec3 rotateVector(vec3& p, vec3& v, float angle) {
+	v = normalizeVector(v);
+	vec3 n = createNormalVector(p, v);
+	n = normalizeVector(n);
+	vec3 r = v * cosf(angle) + n * sinf(angle);
+	adjustVectorAfterMoving(r, p);
+	return r;
+}
+vec3 createDirectionVector(const vec3& p) {
+	float vx, vy, vz;
+	if (p.x != 0.0f) {
+		vx = 1;
+		vy = (p.z * p.z - vx * p.y) / p.x;
+		vz = p.z;
+		return vec3(vx, vy, vz);
 	}
-	void setPosition(float x, float y) { position.x = x; position.y = y; }
-	void draw() const {
-		int location = glGetUniformLocation(gpuProgram.getId(), "color");
-		glUniform3f(location, 0.0f, 1.0f, 0.0f);
-
-		glBindBuffer(GL_ARRAY_BUFFER, pointVBO);
-		glBufferData(GL_ARRAY_BUFFER, 2 * sizeof(float), &position, GL_STATIC_DRAW);
-
-		glEnableVertexAttribArray(0);
-		glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, NULL);
-
-		glPointSize(5);
-		glDrawArrays(GL_POINTS, 0, 1);
+	if (p.y != 0.0f) {
+		vx = (p.z * p.z - vy * p.x) / p.y;
+		vy = 1;
+		vz = p.z;
+		return vec3(vx, vy, vz);
 	}
-};
+	return vec3(0.0f, 1.0f, 0.0f);
+}
 
+//hyperbolic circle
 class hCircle {
 
 private:
@@ -108,63 +140,26 @@ private:
 
 	float hRadius;
 	float data[numberOfAttributes];	
-	unsigned int hCircleVBO;
+	unsigned int hCircleVBO;	
 
-
-//hyperbolic geometry
 public:
-	void adjustPointAfterMoving(vec3& p) {
-		float lambda = sqrtf(-1 / lorentzProduct(p, p));
-		p = p * lambda;
-	}
-	void adjustVectorAfterMoving(vec3& v, const vec3& p) {
-		float lambda = lorentzProduct(v, p) / (p.z * p.z - p.x * p.x - p.y * p.y);
-		v = v + p * lambda;
-		v = normalizeVector(v);
-	}
-	float lorentzProduct(vec3 a, vec3 b) {
-		return a.x * b.x + a.y * b.y - a.z * b.z;
-	}
-	vec3 normalizeVector(vec3 v) {
-		float length = sqrt(lorentzProduct(v, v));
-		return v / length;
-	}
-	vec3 createNormalVector(const vec3& p, vec3& v) {
-		v = normalizeVector(v);
-		return cross(vec3(v.x, v.y, -v.z), vec3(p.x, p.y, -p.z));
-	}
-	vec3 createPointByMoving(const vec3& p,  vec3& v, float t) {
-		v = normalizeVector(v);
-		vec3 r = p * coshf(t) + v * sinhf(t);
-		adjustPointAfterMoving(r);
-		return r;
-	}
-	void movePoint(vec3& p, vec3& v, float t) {
-		v = normalizeVector(v);
-		v = p * sinhf(t) + v * coshf(t); 
-		p = p * coshf(t) + v * sinhf(t);
-
-		adjustVectorAfterMoving(v, p);
-		adjustPointAfterMoving(p);
-	}
-	vec3 rotateVector(const vec3& p, vec3& v, float angle) {
-		v = normalizeVector(v);
-		vec3 n = createNormalVector(p, v);
-		n = normalizeVector(n);
-		vec3 r = v * cosf(angle) + n * sinf(angle);
-		adjustVectorAfterMoving(r, p);
-		return r;
-	}
-	vec3 createDirectionVector(const vec3& p) {
-		if (p.x == 0.0f && p.y != 0.0f)
-			return vec3(p.x, p.z * p.z / p.y, p.z * p.z);
+	hCircle() { glGenBuffers(1, &hCircleVBO); }
+	hCircle(float x, float y, float z, float rad, float r, float g, float b) {
+		color = vec3(r, g, b);
+		hRadius = rad;
+		hPoint = vec3(x, y, z);
+		hVector = createDirectionVector(hPoint);
 		
-		if(p.y == 0.0f && p.x != 0.0f)
-			return vec3(p.z * p.z / p.x, p.y, p.z * p.z);
-
-		if (p.x == 0.0f && p.y == 0.0f)
-			return vec3(0.0f, 1.0f, 0.0f);
+		displayPosition();
+		
+		loadHCirclePoints();
+		glGenBuffers(1, &hCircleVBO);
 	}
+	vec2 getPPoint() const { return pPoint; }
+	vec3 getHyperbolicVector() const { return hVector; }
+	vec3 getHyperbolicPoint() const { return hPoint; }
+	float getRadius() const { return hRadius; }
+	void setHyperbolicPoint(vec3 p) { hPoint = p; }
 
 	void pProjection() {
 		pPoint.x = hPoint.x / (hPoint.z + 1);
@@ -201,25 +196,6 @@ public:
 		std::cout << "r: " << hRadius << std::endl << std::endl;*/
 	}
 
-public:
-	hCircle() { glGenBuffers(1, &hCircleVBO); }
-	hCircle(float x, float y, float z, float rad, float r, float g, float b) {
-		color = vec3(r, g, b);
-		hRadius = rad;
-		hPoint = vec3(x, y, z);
-		hVector = createDirectionVector(hPoint);
-		
-		displayPosition();
-		
-		loadHCirclePoints();
-		glGenBuffers(1, &hCircleVBO);
-	}
-	vec2 getPPoint() const { return pPoint; }
-	vec3 getHyperbolicVector() const { return hVector; }
-	vec3 getHyperbolicPoint() const { return hPoint; }
-	float getRadius() const { return hRadius; }
-	void setHyperbolicPoint(vec3 p) { hPoint = p; }
-
 	void move(float t) {
 		movePoint(hPoint, hVector, t);
 		loadHCirclePoints();
@@ -227,9 +203,9 @@ public:
 	}
 	void rotate(bool left) {
 		if(left)
-			hVector = rotateVector(hPoint, hVector, -M_PI / 16);
-		else
 			hVector = rotateVector(hPoint, hVector, M_PI / 16);
+		else
+			hVector = rotateVector(hPoint, hVector, -M_PI / 16);
 
 		loadHCirclePoints();
 		create();
@@ -301,6 +277,7 @@ class Eyes {
 	hCircle* leftEyeball;
 	hCircle* rightEyeball;
 	const float eyeballRadius = 0.1f;
+	const float angle = M_PI / 4;
 
 private:
 	vec3 createEyeballPosition(hCircle* body, bool left) const{
@@ -309,20 +286,12 @@ private:
 		float r = body->getRadius();
 		vec3 vr;
 
-		std::cout << "p: " << p.x << ", " << p.y << ", " << p.z << std::endl;
-		std::cout << "v: " << v.x << ", " << v.y << ", " << v.z << std::endl;
-
 		if (left)
-			vec3 vr = body->rotateVector(p, v, 0);
+			vr = rotateVector(p, v, angle);
 		else
-			vec3 vr = body->rotateVector(p, v, 0);
+			vr = rotateVector(p, v, -angle);
 
-		std::cout << "vr: " << vr.x << ", " << vr.y << ", " << vr.z << std::endl;
-
-		vec3 a = body->createPointByMoving(p, vr, r);
-		std::cout << "position: " << a.x << ", " << a.y << ", " << a.z << std::endl;
-
-		return vec3(p.x, p.y, p.z);
+		return createPointByMoving(p, vr, r);
 	}
 
 public:
@@ -366,9 +335,20 @@ class UFO {
 	hCircle* body;
 	hCircle* mouth;
 	Eyes* eyes;
-	float radius;
+
 	vec3 hPoint;
 	vec3 hVector;
+
+	float radius;
+	bool moving = false;
+	bool rotatingLeft = false;
+	bool rotatingRight = false;
+
+private:
+	void rotate(bool left) { body->rotate(left); }
+	void move(float t) {
+		body->move(t);
+	}
 
 public:
 	UFO(float x, float y, float z, float rad, float r, float g, float b){
@@ -377,35 +357,38 @@ public:
 
 		hPoint = body->getHyperbolicPoint();
 		hVector = body->getHyperbolicVector();
-		vec3 mouthPos = body->createPointByMoving(hPoint, hVector, radius);
+		vec3 mouthPos = createPointByMoving(hPoint, hVector, radius);
 
-		mouth = new hCircle(mouthPos.x, mouthPos.y, mouthPos.z, 0.1f, 0.0f, 0.0f, 0.0f);
-		eyes = new Eyes(body);
+		mouth = new hCircle(mouthPos.x, mouthPos.y, mouthPos.z, 0.2f, 0.0f, 0.0f, 0.0f);
 
 		body->create();
 		mouth->create();
 
+		eyes = new Eyes(body);
 	}
+	void setMoving(bool value) { moving = value; }
+	void setRotatingLeft(bool value) { rotatingLeft = value; }
+	void setRotatingRight(bool value) { rotatingRight = value; }
 	void update() {
 		hPoint = body->getHyperbolicPoint();
 		hVector = body->getHyperbolicVector();
-		vec3 mouthPosition = body->createPointByMoving(hPoint, hVector, radius);
+		vec3 mouthPosition = createPointByMoving(hPoint, hVector, radius);
 		mouth->setHyperbolicPoint(mouthPosition);
 		mouth->loadHCirclePoints();
 		mouth->create();
 
-		//eyes->update(body);
-	}
-	void rotate(bool left) {
-		if (left) 
-			body->rotate(true);
-		else 
-			body->rotate(false);
+		eyes->update(body);
+
+		if (moving) 
+			move(0.05f);
 		
+		if (rotatingLeft)
+			rotate(true);
+
+		if (rotatingRight)
+			rotate(false);
 	}
-	void move(float t) {
-		body->move(t);
-	}
+	
 	void draw() const {
 		body->draw();
 		mouth->draw();
@@ -414,7 +397,7 @@ public:
 	~UFO() {
 		delete body;
 		delete mouth;
-		//delete eyes;
+		delete eyes;
 	}
 };
 
@@ -451,34 +434,42 @@ void onDisplay() {
 	poincarePlane->draw();
 	player->draw();
 
-	
-
 	glutSwapBuffers(); // exchange buffers for double buffering
 }
 
 // Key of ASCII code pressed
 void onKeyboard(unsigned char key, int pX, int pY) {
 	if (key == 'e') {
-		player->move(0.05f);
+		player->setMoving(true);
 		player->update();
 	}
-
 	if (key == 'f') {
-		player->rotate(true);
+		player->setRotatingRight(true);
 		player->update();
 	}
-	
 	if (key == 's') {
-		player->rotate(false);
+		player->setRotatingLeft(true);
 		player->update();
 	}
-
 	glutPostRedisplay();
 }
 
 // Key of ASCII code released
 void onKeyboardUp(unsigned char key, int pX, int pY) {
+	if (key == 'e') {
+		player->setMoving(false);
+		player->update();
+	}
+	if (key == 'f') {
+		player->setRotatingRight(false);
+		player->update();
+	}
+	if (key == 's') {
+		player->setRotatingLeft(false);
+		player->update();
 
+	}
+	glutPostRedisplay();
 }
 
 // Move mouse with key pressed
@@ -511,7 +502,4 @@ void onMouse(int button, int state, int pX, int pY) { // pX, pY are the pixel co
 // Idle event indicating that some time elapsed: do animation here
 void onIdle() {
 	long time = glutGet(GLUT_ELAPSED_TIME); // elapsed time since the start of the program
-	player->update();
-
-	//std::cout << time << "\n";
 }
