@@ -68,5 +68,6 @@ int main(int argc, char * argv[]) {
 	glutMotionFunc(onMouseMotion);
 
 	glutMainLoop();
+
 	return 1;
 }

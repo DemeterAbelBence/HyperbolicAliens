@@ -1,1 +1,17 @@
-﻿  Skeleton.vcxproj -> C:\Users\demet\OneDrive\Asztali gép\BME\4felevC#\GrafikaHaziCsomag\Programs\Skeleton\bin\Skeleton.exe
+﻿  Skeleton.cpp
+C:\Users\demet\OneDrive\Asztali gép\BME\4felevC#\GrafikaHaziCsomag\Programs\Skeleton\Skeleton\framework.h(167,17): warning C4996: 'fopen': This function or variable may be unsafe. Consider using fopen_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+C:\Users\demet\OneDrive\Asztali gép\BME\4felevC#\GrafikaHaziCsomag\Programs\Skeleton\Skeleton\Skeleton.cpp(68,15): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
+C:\Users\demet\OneDrive\Asztali gép\BME\4felevC#\GrafikaHaziCsomag\Programs\Skeleton\Skeleton\Skeleton.cpp(107,14): warning C4244: 'return': conversion from 'double' to 'float', possible loss of data
+C:\Users\demet\OneDrive\Asztali gép\BME\4felevC#\GrafikaHaziCsomag\Programs\Skeleton\Skeleton\Skeleton.cpp(183,16): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
+C:\Users\demet\OneDrive\Asztali gép\BME\4felevC#\GrafikaHaziCsomag\Programs\Skeleton\Skeleton\Skeleton.cpp(266,16): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
+C:\Users\demet\OneDrive\Asztali gép\BME\4felevC#\GrafikaHaziCsomag\Programs\Skeleton\Skeleton\Skeleton.cpp(267,21): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+C:\Users\demet\OneDrive\Asztali gép\BME\4felevC#\GrafikaHaziCsomag\Programs\Skeleton\Skeleton\Skeleton.cpp(268,25): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+C:\Users\demet\OneDrive\Asztali gép\BME\4felevC#\GrafikaHaziCsomag\Programs\Skeleton\Skeleton\Skeleton.cpp(286,20): warning C4305: 'initializing': truncation from 'double' to 'const float'
+C:\Users\demet\OneDrive\Asztali gép\BME\4felevC#\GrafikaHaziCsomag\Programs\Skeleton\Skeleton\Skeleton.cpp(421,21): warning C4018: '<': signed/unsigned mismatch
+C:\Users\demet\OneDrive\Asztali gép\BME\4felevC#\GrafikaHaziCsomag\Programs\Skeleton\Skeleton\Skeleton.cpp(444,21): warning C4018: '<': signed/unsigned mismatch
+  Generating code
+  Previous IPDB and IOBJ mismatch, fall back to full compilation.
+C:\Users\demet\OneDrive\Asztali gép\BME\4felevC#\GrafikaHaziCsomag\Programs\Skeleton\Skeleton\Skeleton.cpp(118): warning C4700: uninitialized local variable 'vy' used
+  All 265 functions were compiled because no usable IPDB/IOBJ from previous compilation was found.
+  Finished generating code
+  Skeleton.vcxproj -> C:\Users\demet\OneDrive\Asztali gép\BME\4felevC#\GrafikaHaziCsomag\Programs\Skeleton\bin\Skeleton.exe
